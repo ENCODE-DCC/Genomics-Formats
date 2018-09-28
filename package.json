@@ -6,11 +6,8 @@
   "types": "./dist",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "cti src && tsc"
+    "build": "tsc"
   },
   "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "create-ts-index": "1.0.x"
-  }
+  "license": "ISC"
 }
