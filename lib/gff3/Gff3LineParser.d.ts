@@ -28,16 +28,20 @@ export declare class Gff3LineParser {
     protected callbacks: LineCallbacks;
     protected lineNumber: number;
     protected fastaMode: boolean;
+    protected gtfCompatMode: boolean;
     protected incompleteLineBuffer: string;
     constructor(callbacks: Partial<LineCallbacks>);
+    reset: () => void;
     parseChunk: (string: string) => void;
     end: () => void;
-    reset: () => void;
     protected parseLine(line: string, lineNumber: number): void;
     protected parseOptional(field: string): string | null;
     protected parseStrand(field: string | null): Strand;
     protected parseAttributes(field: string | null): FeatureAttributes;
+    protected parseGff3AttributeAssignment(assignment: string, attributes: FeatureAttributes): void;
+    protected parseGff2AttributeAssignment(assignment: string, attributes: FeatureAttributes): void;
     protected parseMeta(line: string): void;
     protected parseDirective(line: string): void;
+    protected unwrapQuotes(s: string): string;
 }
 export default Gff3LineParser;
