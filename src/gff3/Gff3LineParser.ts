@@ -197,6 +197,7 @@ export class Gff3LineParser {
         let assignments = field.split(';');
 
         for (let assignment of assignments) {
+            if (assignment.trim() == '') continue;
             if (this.gtfCompatMode) {
                 this.parseGff2AttributeAssignment(assignment, attributes);
             } else {
