@@ -84,8 +84,9 @@ export class Gff3LineParser {
     };
 
     // parse state
-    protected lineNumber = 0;
+    protected lineNumber: number;
     protected fastaMode: boolean;
+    protected gtfCompatMode: boolean;
     protected incompleteLineBuffer: string;
 
     constructor(callbacks: Partial<LineCallbacks>) {
@@ -95,6 +96,13 @@ export class Gff3LineParser {
         }
 
         this.reset();
+    }
+
+    reset = () => {
+        this.lineNumber = 0;
+        this.incompleteLineBuffer = '';
+        this.fastaMode = false;
+        this.gtfCompatMode = false;
     }
 
     parseChunk = (string: string) => {
@@ -121,12 +129,6 @@ export class Gff3LineParser {
     end = () => {
         this.parseLine(this.incompleteLineBuffer, this.lineNumber++);
         this.callbacks.onComplete();
-    }
-
-    reset = () => {
-        this.lineNumber = 0;
-        this.incompleteLineBuffer = '';
-        this.fastaMode = false;
     }
     
     protected parseLine(line: string, lineNumber: number) {
@@ -195,82 +197,120 @@ export class Gff3LineParser {
         let assignments = field.split(';');
 
         for (let assignment of assignments) {
-            try {
-                let e = assignment.indexOf('=');
-                if (e === -1) {
-                    throw `Assignment must contain a '=' character`;
-                }
-
-                let tag = decodeURIComponent(assignment.substring(0, e)).trim();
-                let values = assignment.substring(e + 1).split(',').map(decodeURIComponent);
-
-                // tags are case sensitive
-                switch (tag) {
-                    case 'ID': {
-                        attributes.id = values[0];
-                        break;
-                    }
-                    case 'Name': {
-                        attributes.name = values[0];
-                        break;
-                    }
-                    case 'Alias': {
-                        attributes.aliases = values;
-                        break;
-                    }
-                    case 'Parent': {
-                        attributes.parentIds = values;
-                        break;
-                    }
-                    case 'Target': {
-                        let result = values[0].match(/([^\s]+)\s+(\d+)\s+(\d+)(\s+([+-]))?/);
-                        if (result !== null) {
-                            attributes.target = {
-                                id: result[1],
-                                start: parseInt(result[2]),
-                                end: parseInt(result[3]),
-                                strand: this.parseStrand(result[5]),
-                            };
-                        } else {
-                            throw 'Could not parse target format';
-                        }
-                        break;
-                    }
-                    case 'Gap': {
-                        attributes.gap = values[0];
-                        break;
-                    }
-                    case 'Derives_from': {
-                        attributes.derivesFromId = values[0];
-                        break;
-                    }
-                    case 'Note': {
-                        attributes.notes = values;
-                        break;
-                    }
-                    case 'Dbxref': {
-                        attributes.dbxrefs = values;
-                        break;
-                    }
-                    case 'Ontology_term': {
-                        attributes.ontologyTerms = values;
-                        break;
-                    }
-                    case 'Is_circular': {
-                        attributes.isCircular = (values[0].toLowerCase().trim()) === 'true';
-                        break;
-                    }
-                    default: {
-                        attributes.custom[tag] = values;
-                        break;
-                    }
-                }
-            } catch (e) {
-                this.callbacks.onInvalidAttribute(assignment, e);
+            if (this.gtfCompatMode) {
+                this.parseGff2AttributeAssignment(assignment, attributes);
+            } else {
+                this.parseGff3AttributeAssignment(assignment, attributes);
             }
         }
 
         return attributes;
+    }
+
+    protected parseGff3AttributeAssignment(assignment: string, attributes: FeatureAttributes) {
+        try {
+            let e = assignment.indexOf('=');
+            if (e === -1) {
+                throw `Assignment must contain a '=' character`;
+            }
+
+            let tag = decodeURIComponent(assignment.substring(0, e)).trim();
+            let values = assignment.substring(e + 1).split(',').map(decodeURIComponent);
+
+            // tags are case sensitive
+            switch (tag) {
+                case 'ID': {
+                    attributes.id = values[0];
+                    break;
+                }
+                case 'Name': {
+                    attributes.name = values[0];
+                    break;
+                }
+                case 'Alias': {
+                    attributes.aliases = values;
+                    break;
+                }
+                case 'Parent': {
+                    attributes.parentIds = values;
+                    break;
+                }
+                case 'Target': {
+                    let result = values[0].match(/([^\s]+)\s+(\d+)\s+(\d+)(\s+([+-]))?/);
+                    if (result !== null) {
+                        attributes.target = {
+                            id: result[1],
+                            start: parseInt(result[2]),
+                            end: parseInt(result[3]),
+                            strand: this.parseStrand(result[5]),
+                        };
+                    } else {
+                        throw 'Could not parse target format';
+                    }
+                    break;
+                }
+                case 'Gap': {
+                    attributes.gap = values[0];
+                    break;
+                }
+                case 'Derives_from': {
+                    attributes.derivesFromId = values[0];
+                    break;
+                }
+                case 'Note': {
+                    attributes.notes = values;
+                    break;
+                }
+                case 'Dbxref': {
+                    attributes.dbxrefs = values;
+                    break;
+                }
+                case 'Ontology_term': {
+                    attributes.ontologyTerms = values;
+                    break;
+                }
+                case 'Is_circular': {
+                    attributes.isCircular = (values[0].toLowerCase().trim()) === 'true';
+                    break;
+                }
+                default: {
+                    attributes.custom[tag] = values;
+                    break;
+                }
+            }
+        } catch (e) {
+            this.callbacks.onInvalidAttribute(assignment, e);
+        }
+    }
+
+    protected parseGff2AttributeAssignment(assignment: string, attributes: FeatureAttributes) {
+        try {
+            let e = assignment.indexOf(' ');
+            if (e === -1) {
+                throw `Assignment must contain a space character`;
+            }
+
+            let tag = decodeURIComponent(assignment.substring(0, e)).trim().toLocaleLowerCase();
+            let value = assignment.substring(e + 1);
+
+            // tags are case sensitive
+            switch (tag) {
+                case 'gene_id': {
+                    attributes.id = this.unwrapQuotes(value);
+                    break;
+                }
+                case 'gene_name': {
+                    attributes.name = this.unwrapQuotes(value);
+                    break;
+                }
+                default: {
+                    attributes.custom[tag] = [this.unwrapQuotes(value)];
+                    break;
+                }
+            }
+        } catch (e) {
+            this.callbacks.onInvalidAttribute(assignment, e);
+        }
     }
 
     // #...
@@ -359,6 +399,39 @@ export class Gff3LineParser {
                     this.callbacks.onFastaStart();
                     break;
                 }
+
+                // Compatibility with GFF2 / GTF directives
+                case 'description': {
+                    if (parameter != null) this.callbacks.onComment('Description: ' + parameter);
+                    break;
+                }
+                case 'provider': {
+                    if (parameter != null) this.callbacks.onComment('Provider: ' + parameter);
+                    break;
+                }
+                case 'contact': {
+                    if (parameter != null) this.callbacks.onComment('Contact: ' + parameter);
+                    break;
+                }
+                case 'format': {
+                    if (parameter != null) {
+                        let versionString = parameter.trim().toLowerCase();
+                        this.callbacks.onVersion(versionString);
+
+                        switch (versionString) {
+                            case 'gtf':
+                            case 'gff2':
+                                this.gtfCompatMode = true;
+                                break;
+                        }
+                    }
+                    break;
+                }
+                case 'date': {
+                    if (parameter != null) this.callbacks.onComment('Date: ' + parameter);
+                    break;
+                }
+
                 default: {
                     this.callbacks.onUnknownDirective(name, parameter);
                     break;
@@ -368,6 +441,10 @@ export class Gff3LineParser {
             this.callbacks.onInvalidDirective(content, reason);
         }
 
+    }
+
+    protected unwrapQuotes(s: string) {
+        return s.substring(1, s.length - 1);
     }
 
 }
