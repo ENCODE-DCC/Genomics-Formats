@@ -339,7 +339,7 @@ export class Gff3LineParser {
 
         try {
             switch (name) {
-                case '#': {
+                case '#': { // ###
                     if (parameter != null) throw 'Feature termination directive must not have any parameter';
                     this.callbacks.onFeatureGroupTermination();
                     break;
@@ -388,10 +388,6 @@ export class Gff3LineParser {
                     if (parameter == null) throw 'Missing source and build name';
                     let parts = (parameter || '').split(/\s+/);
                     this.callbacks.onGenomeBuild(decodeURIComponent(parts[0]), decodeURIComponent(parts[1]));
-                    break;
-                }
-                case '#': { // ###
-                    this.callbacks.onFeatureGroupTermination();
                     break;
                 }
                 case 'fasta': {
