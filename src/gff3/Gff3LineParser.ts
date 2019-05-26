@@ -401,19 +401,19 @@ export class Gff3LineParser {
                 }
 
                 // Compatibility with GFF2 / GTF directives
-                case 'description': {
+                case 'description:': {
                     if (parameter != null) this.callbacks.onComment('Description: ' + parameter);
                     break;
                 }
-                case 'provider': {
+                case 'provider:': {
                     if (parameter != null) this.callbacks.onComment('Provider: ' + parameter);
                     break;
                 }
-                case 'contact': {
+                case 'contact:': {
                     if (parameter != null) this.callbacks.onComment('Contact: ' + parameter);
                     break;
                 }
-                case 'format': {
+                case 'format:': {
                     if (parameter != null) {
                         let versionString = parameter.trim().toLowerCase();
                         this.callbacks.onVersion(versionString);
@@ -427,7 +427,7 @@ export class Gff3LineParser {
                     }
                     break;
                 }
-                case 'date': {
+                case 'date:': {
                     if (parameter != null) this.callbacks.onComment('Date: ' + parameter);
                     break;
                 }
