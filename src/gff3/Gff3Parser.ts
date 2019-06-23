@@ -103,7 +103,10 @@ export class Gff3Parser {
             onFastaStart: () => this.gff3.fasta = '',
             onFastaChunk: (fastaStr: string) => this.gff3.fasta += fastaStr,
 
-            onComplete: this.onLineParserComplete,
+            onComplete: () => {
+                this.closeCurrentScope();
+                this.onLineParserComplete();
+            },
 
             // error handling
             onUnknownDirective: (n, p) => this.callbacks.onError(`Unknown directive "${n} ${p}"`),
