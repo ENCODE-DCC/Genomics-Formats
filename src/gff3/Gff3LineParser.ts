@@ -165,7 +165,7 @@ export class Gff3LineParser {
                     // attributes
                     this.parseAttributes(this.parseOptional(columns[8]))
                 );
-                
+
                 // there are no explicit feature groups in gtf
                 if (this.gtfCompatMode) {
                     this.callbacks.onFeatureGroupTermination();
@@ -230,7 +230,9 @@ export class Gff3LineParser {
                     attributes.id = values[0];
                     break;
                 }
-                case 'Name': {
+                case 'Name':
+                case 'gene_name':
+                case 'transcript_name': {
                     attributes.name = values[0];
                     break;
                 }
@@ -306,7 +308,8 @@ export class Gff3LineParser {
                     attributes.id = this.unwrapQuotes(value);
                     break;
                 }
-                case 'gene_name': {
+                case 'gene_name':
+                case 'transcript_name': {
                     attributes.name = this.unwrapQuotes(value);
                     break;
                 }
