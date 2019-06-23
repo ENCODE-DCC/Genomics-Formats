@@ -165,11 +165,6 @@ export class Gff3LineParser {
                     // attributes
                     this.parseAttributes(this.parseOptional(columns[8]))
                 );
-
-                // there are no explicit feature groups in gtf
-                if (this.gtfCompatMode) {
-                    this.callbacks.onFeatureGroupTermination();
-                }
             }
         }
     }
