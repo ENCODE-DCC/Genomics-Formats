@@ -145,17 +145,16 @@ export class Gff3Parser {
             attributes: attributes
         };
 
-        // declare into local scope if it has an ID
-        if (attributes.id != null) {
-            this.currentScope[attributes.id] = feature;
-        }
-
         // add to feature set
         if (attributes.parentIds == null) {
             // define a top-level feature
             if (this.storeFeatures) {
                 this.getSequence(seqId).features.add(feature);
             }
+
+            // assume this new top-level feature means we're finished with the previous top-level feature
+            this.closeCurrentScope();
+
             this.currentScopeTopLevel.add(feature);
         } else {
             // attach to a feature in the local scope
@@ -169,6 +168,11 @@ export class Gff3Parser {
 
                 parentObject.children.push(feature);
             }
+        }
+
+        // declare into local scope if it has an ID
+        if (attributes.id != null) {
+            this.currentScope[attributes.id] = feature;
         }
     }
 
