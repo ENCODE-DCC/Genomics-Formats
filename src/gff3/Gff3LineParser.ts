@@ -32,10 +32,10 @@ export type LineCallbacks = {
     ) => void,
 
     // error handling
-    onInvalidFeature: (line: string, reason: string) => void,
-    onInvalidAttribute: (assignment: string, reason: string) => void,
-    onUnknownDirective: (name: string, parameter: string | null) => void,
-    onInvalidDirective: (content: string, reason: string) => void,
+    onInvalidFeature: (line: string, reason: string, lineNumber: number) => void,
+    onInvalidAttribute: (assignment: string, reason: string, lineNumber: number) => void,
+    onUnknownDirective: (name: string, parameter: string | null, lineNumber: number) => void,
+    onInvalidDirective: (content: string, reason: string, lineNumber: number) => void,
 
     // once the ##FASTA directive has been encountered the rest of the file is FASTA content
     onFastaChunk: (string: string) => void,
@@ -137,13 +137,13 @@ export class Gff3LineParser {
 
         // if line starts with a # it's a meta line – a comment or a directive
         if (line[0] === '#') {
-            this.parseMeta(line);
+            this.parseMeta(line, lineNumber);
         } else {
             // parse line
             let columns = line.split('\t');
 
             if (columns.length !== 9) {
-                this.callbacks.onInvalidFeature(line, `Expected 9 tab-separated columns, got ${columns.length}`);
+                this.callbacks.onInvalidFeature(line, `Expected 9 tab-separated columns, got ${columns.length}`, lineNumber);
             } else {
                 this.callbacks.onFeature(
                     // seqId
@@ -197,12 +197,17 @@ export class Gff3LineParser {
         let assignments = field.split(';');
 
         for (let assignment of assignments) {
-            if (this.gtfCompatMode) {
+            try {
                 let assignmentTrimmed = assignment.trim();
                 if (assignmentTrimmed == '') continue;
-                this.parseGff2AttributeAssignment(assignmentTrimmed, attributes);
-            } else {
-                this.parseGff3AttributeAssignment(assignment, attributes);
+
+                if (this.gtfCompatMode) {
+                    this.parseGff2AttributeAssignment(assignmentTrimmed, attributes);
+                } else {
+                    this.parseGff3AttributeAssignment(assignment, attributes);
+                }
+            } catch (e: any) {
+                this.callbacks.onInvalidAttribute(assignment, e, this.lineNumber);
             }
         }
 
@@ -210,132 +215,124 @@ export class Gff3LineParser {
     }
 
     protected parseGff3AttributeAssignment(assignment: string, attributes: FeatureAttributes) {
-        try {
-            let e = assignment.indexOf('=');
-            if (e === -1) {
-                throw `Assignment must contain a '=' character`;
-            }
+        let e = assignment.indexOf('=');
+        if (e === -1) {
+            throw `Assignment must contain a '=' character`;
+        }
 
-            let tag = decodeURIComponent(assignment.substring(0, e)).trim();
-            let values = assignment.substring(e + 1).split(',').map(decodeURIComponent);
+        let tag = decodeURIComponent(assignment.substring(0, e)).trim();
+        let values = assignment.substring(e + 1).split(',').map(decodeURIComponent);
 
-            // tags are case sensitive
-            switch (tag) {
-                case 'ID': {
-                    attributes.id = values[0];
-                    break;
-                }
-                case 'Name':
-                case 'gene_name':
-                case 'transcript_name': {
-                    attributes.name = values[0];
-                    break;
-                }
-                case 'Alias': {
-                    attributes.aliases = values;
-                    break;
-                }
-                case 'Parent': {
-                    attributes.parentIds = values;
-                    break;
-                }
-                case 'Target': {
-                    let result = values[0].match(/([^\s]+)\s+(\d+)\s+(\d+)(\s+([+-]))?/);
-                    if (result !== null) {
-                        attributes.target = {
-                            id: result[1],
-                            start: parseInt(result[2]),
-                            end: parseInt(result[3]),
-                            strand: this.parseStrand(result[5]),
-                        };
-                    } else {
-                        throw 'Could not parse target format';
-                    }
-                    break;
-                }
-                case 'Gap': {
-                    attributes.gap = values[0];
-                    break;
-                }
-                case 'Derives_from': {
-                    attributes.derivesFromId = values[0];
-                    break;
-                }
-                case 'Note': {
-                    attributes.notes = values;
-                    break;
-                }
-                case 'Dbxref': {
-                    attributes.dbxrefs = values;
-                    break;
-                }
-                case 'Ontology_term': {
-                    attributes.ontologyTerms = values;
-                    break;
-                }
-                case 'Is_circular': {
-                    attributes.isCircular = (values[0].toLowerCase().trim()) === 'true';
-                    break;
-                }
-                default: {
-                    attributes.custom[tag] = values;
-                    break;
-                }
+        // tags are case sensitive
+        switch (tag) {
+            case 'ID': {
+                attributes.id = values[0];
+                break;
             }
-        } catch (e) {
-            this.callbacks.onInvalidAttribute(assignment, e);
+            case 'Name':
+            case 'gene_name':
+            case 'transcript_name': {
+                attributes.name = values[0];
+                break;
+            }
+            case 'Alias': {
+                attributes.aliases = values;
+                break;
+            }
+            case 'Parent': {
+                attributes.parentIds = values;
+                break;
+            }
+            case 'Target': {
+                let result = values[0].match(/([^\s]+)\s+(\d+)\s+(\d+)(\s+([+-]))?/);
+                if (result !== null) {
+                    attributes.target = {
+                        id: result[1],
+                        start: parseInt(result[2]),
+                        end: parseInt(result[3]),
+                        strand: this.parseStrand(result[5]),
+                    };
+                } else {
+                    throw 'Could not parse target format';
+                }
+                break;
+            }
+            case 'Gap': {
+                attributes.gap = values[0];
+                break;
+            }
+            case 'Derives_from': {
+                attributes.derivesFromId = values[0];
+                break;
+            }
+            case 'Note': {
+                attributes.notes = values;
+                break;
+            }
+            case 'Dbxref': {
+                attributes.dbxrefs = values;
+                break;
+            }
+            case 'Ontology_term': {
+                attributes.ontologyTerms = values;
+                break;
+            }
+            case 'Is_circular': {
+                attributes.isCircular = (values[0].toLowerCase().trim()) === 'true';
+                break;
+            }
+            default: {
+                attributes.custom[tag] = values;
+                break;
+            }
         }
     }
 
     protected parseGff2AttributeAssignment(assignment: string, attributes: FeatureAttributes) {
-        try {
-            let e = assignment.indexOf(' ');
-            if (e === -1) {
-                throw `Assignment must contain a space character`;
-            }
+        let e = assignment.indexOf(' ');
+        if (e === -1) {
+            throw `Assignment must contain a space character`;
+        }
 
-            let tag = decodeURIComponent(assignment.substring(0, e)).trim().toLocaleLowerCase();
-            let value = assignment.substring(e + 1);
+        let tag = decodeURIComponent(assignment.substring(0, e)).trim().toLocaleLowerCase();
+        let value = assignment.substring(e + 1);
 
-            // tags are case sensitive
-            switch (tag) {
-                case 'gene_id': {
-                    attributes.id = this.unwrapQuotes(value);
-                    break;
-                }
-                case 'gene_name':
-                case 'transcript_name': {
-                    attributes.name = this.unwrapQuotes(value);
-                    break;
-                }
-                default: {
-                    attributes.custom[tag] = [this.unwrapQuotes(value)];
-                    break;
-                }
+        // tags are case sensitive
+        switch (tag) {
+            case 'gene_id': {
+                attributes.id = this.unwrapQuotes(value);
+                break;
             }
-        } catch (e) {
-            this.callbacks.onInvalidAttribute(assignment, e);
+            case 'gene_name':
+            case 'transcript_name': {
+                attributes.name = this.unwrapQuotes(value);
+                break;
+            }
+            default: {
+                attributes.custom[tag] = [this.unwrapQuotes(value)];
+                break;
+            }
         }
     }
 
     // #...
-    protected parseMeta(line: string) {
+    protected parseMeta(line: string, lineNumber: number) {
         if (line[1] === '#') {
             // if a meta starts with ## then it's a directive
-            this.parseDirective(line);
+            this.parseDirective(line, lineNumber);
         } else {
             this.callbacks.onComment(line.substr(1));
         }
     }
 
     // ##...
-    protected parseDirective(line: string) {
+    protected parseDirective(line: string, lineNumber: number) {
         let content = line.substring(2);
         let namePattern = /^([^\s]+)(\s+(.*))?/;
 
         let result = namePattern.exec(content);
         if (result === null) {
-            this.callbacks.onInvalidDirective(content, 'Invalid directive name');
+            this.callbacks.onInvalidDirective(content, 'Invalid directive name', lineNumber);
             return;
         }
 
@@ -434,12 +431,12 @@ export class Gff3LineParser {
                 }
 
                 default: {
-                    this.callbacks.onUnknownDirective(name, parameter);
+                    this.callbacks.onUnknownDirective(name, parameter, lineNumber);
                     break;
                 }
             }
         } catch (reason) {
-            this.callbacks.onInvalidDirective(content, reason);
+            this.callbacks.onInvalidDirective(content, reason, lineNumber);
         }
 
     }

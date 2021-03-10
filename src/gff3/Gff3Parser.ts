@@ -109,10 +109,10 @@ export class Gff3Parser {
             },
 
             // error handling
-            onUnknownDirective: (n, p) => this.callbacks.onError(`Unknown directive "${n} ${p}"`),
-            onInvalidAttribute: (a, m) => this.callbacks.onError(`Invalid attribute: "${a}", ${m}`),
-            onInvalidDirective: (c, m) => this.callbacks.onError(`Invalid directive: "${c}", ${m}`),
-            onInvalidFeature: (f, m) => this.callbacks.onError(`Invalid feature: ${m}`),
+            onUnknownDirective: (n, p, lineNo) => this.callbacks.onError(`Unknown directive "${n} ${p}" (line ${lineNo})`),
+            onInvalidAttribute: (a, m, lineNo) => this.callbacks.onError(`Invalid attribute: "${a}", ${m} (line ${lineNo})`),
+            onInvalidDirective: (c, m, lineNo) => this.callbacks.onError(`Invalid directive: "${c}", ${m} (line ${lineNo})`),
+            onInvalidFeature: (f, m, lineNo) => this.callbacks.onError(`Invalid feature: ${m} (line ${lineNo})`),
         });
     }
 
