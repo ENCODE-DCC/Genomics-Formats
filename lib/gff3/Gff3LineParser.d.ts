@@ -16,10 +16,10 @@ export declare type LineCallbacks = {
     onFastaStart: () => void;
     onComment: (comment: string) => void;
     onFeature: (seqId: string, source: string | null, type: string, start: number | null, end: number | null, score: number | null, strand: Strand, phase: Phase | null, attributes: FeatureAttributes) => void;
-    onInvalidFeature: (line: string, reason: string) => void;
-    onInvalidAttribute: (assignment: string, reason: string) => void;
-    onUnknownDirective: (name: string, parameter: string | null) => void;
-    onInvalidDirective: (content: string, reason: string) => void;
+    onInvalidFeature: (line: string, reason: string, lineNumber: number) => void;
+    onInvalidAttribute: (assignment: string, reason: string, lineNumber: number) => void;
+    onUnknownDirective: (name: string, parameter: string | null, lineNumber: number) => void;
+    onInvalidDirective: (content: string, reason: string, lineNumber: number) => void;
     onFastaChunk: (string: string) => void;
     onComplete: () => void;
 };
@@ -40,8 +40,8 @@ export declare class Gff3LineParser {
     protected parseAttributes(field: string | null): FeatureAttributes;
     protected parseGff3AttributeAssignment(assignment: string, attributes: FeatureAttributes): void;
     protected parseGff2AttributeAssignment(assignment: string, attributes: FeatureAttributes): void;
-    protected parseMeta(line: string): void;
-    protected parseDirective(line: string): void;
+    protected parseMeta(line: string, lineNumber: number): void;
+    protected parseDirective(line: string, lineNumber: number): void;
     protected unwrapQuotes(s: string): string;
 }
 export default Gff3LineParser;

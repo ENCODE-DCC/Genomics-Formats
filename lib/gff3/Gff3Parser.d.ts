@@ -1,5 +1,5 @@
 import { Feature, FeatureAttributes } from "./Feature";
-import Gff3LineParser from './Gff3LineParser';
+import Gff3LineParser, { Phase } from './Gff3LineParser';
 import { Strand } from "./Strand";
 export declare type Gff3 = {
     version: string;
@@ -39,7 +39,7 @@ export declare class Gff3Parser {
     };
     protected currentScopeTopLevel: Set<Feature>;
     protected reset(): void;
-    protected defineFeature: (seqId: string, source: string | null, type: string, start: number | null, end: number | null, score: number | null, strand: Strand, phase: number | null, attributes: FeatureAttributes) => void;
+    protected defineFeature: (seqId: string, source: string | null, type: string, start: number | null, end: number | null, score: number | null, strand: Strand, phase: Phase | null, attributes: FeatureAttributes) => void;
     protected closeCurrentScope: () => void;
     protected onLineParserComplete: () => void;
     protected getSequence(seqId: string): {
